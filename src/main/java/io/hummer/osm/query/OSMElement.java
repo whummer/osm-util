@@ -13,4 +13,7 @@ public class OSMElement {
 	public Map<String, String> getTags() {
 		return tags;
 	}
+	public String getId() {
+		return id;
+	}
 }

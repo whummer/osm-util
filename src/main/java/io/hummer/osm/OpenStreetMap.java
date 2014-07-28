@@ -19,6 +19,113 @@ public class OpenStreetMap {
 
 	private static final OSMCachedQuerier querier = new OSMCachedQuerier();
 
+	public static boolean isInTunnel(double lat, double lon) {
+		return isInTunnel(lat, lon, Constants.DEFAULT_VICINITY);
+	}
+	public static boolean isInTunnel(double lat, double lon, double vicinity) {
+		try {
+			List<? extends OSMElement> list = getOSMWaysInVicinity(lat, lon, vicinity);
+			return containsTag(list, "tunnel", null);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	public static double getTunnelLength(double lat, double lon) {
+		return getTunnelLength(lat, lon, Constants.DEFAULT_VICINITY);
+	}
+	public static double getTunnelLength(double lat, double lon, double vicinity) {
+		try {
+			/* get tunnel elements within small tile */
+			List<OSMWay> listSmall = getOSMWaysInVicinity(lat, lon, vicinity, true);
+			listSmall = filterForTag(listSmall, "tunnel", null);
+			List<String> tunnelWayIDs = new LinkedList<String>();
+			if(listSmall.size() > 1) {
+				System.err.println("WARN: Multiple tunnel ways found here (" + 
+						listSmall.size() + "): " + lat + "," + lon); // TODO use logger for output
+			}
+			for(OSMWay w : listSmall) {
+				tunnelWayIDs.add(w.getId());
+			}
+			/* get tunnel elements within extended (larger) tile */
+			List<OSMWay> listLarge = getOSMWaysInVicinity(lat, lon, vicinity, false);
+			listLarge = filterForTag(listLarge, "tunnel", null);
+			if(listLarge.isEmpty()) {
+				throw new RuntimeException("There seems to be no tunnel here: " + lat + "," + lon);
+			}
+			/* find all tunnel paths (possibly consisting of multiple ways) */
+			List<List<OSMWay>> ways = getConsecutiveWays(listLarge);
+			if(ways.size() > 1) {
+				System.err.println("WARN: Multiple tunnels found here (" + 
+						ways.size() + "): " + lat + "," + lon); // TODO use logger for output
+				System.out.println(ways);
+			}
+			/* filter correct tunnel path(s) by intersecting small with large */
+			List<OSMWay> listFinal = null;
+			for(List<OSMWay> tmp : ways) {
+				for(OSMWay w : tmp) {
+					if(tunnelWayIDs.contains(w.getId())) {
+						listFinal = tmp;
+						break;
+					}
+				}
+			}
+			return getTunnelLength(listFinal);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private static List<List<OSMWay>> getConsecutiveWays(List<OSMWay> ways) {
+		List<List<OSMWay>> result = new LinkedList<List<OSMWay>>();
+		/* init */
+		for(OSMWay w : ways) {
+			List<OSMWay> tmp = new LinkedList<OSMWay>();
+			tmp.add(w);
+			result.add(tmp);
+		}
+		/* merge */
+		for(int i = 0; i < result.size(); i ++) {
+			List<OSMWay> l1 = result.get(i);
+			for(int j = 0; j < result.size(); j ++) {
+				List<OSMWay> l2 = result.get(j);
+				if(l1 != l2) {
+					List<OSMNode> tmp1 = l1.get(l1.size() - 1).getNodes();
+					List<OSMNode> tmp2 = l2.get(l2.size() - 1).getNodes();
+					OSMNode n1 = tmp1.get(0);
+					OSMNode n2 = tmp2.get(0);
+					OSMNode n3 = tmp1.get(tmp1.size() - 1);
+					OSMNode n4 = tmp2.get(tmp2.size() - 1);
+					if(n1.isSameLocationAs(n4)) {
+						l2.addAll(l1);
+						result.remove(i);
+						i--; j--;
+					} else if(n2.isSameLocationAs(n3)) {
+						l1.addAll(l2);
+						result.remove(j);
+						i--; j--;
+					}
+				}
+			}
+		}
+		return result;
+	}
+
+	private static double getTunnelLength(List<OSMWay> ways) {
+		double length = 0;
+		for(OSMWay way : ways) {
+			length += getTunnelLength(way);
+		}
+		return length;
+	}
+	private static double getTunnelLength(OSMWay way) {
+		double length = 0;
+		for(int i = 0; i < way.getNodes().size() - 1; i ++) {
+			length += getDistance(
+					way.getNodes().get(i), way.getNodes().get(i + 1));
+		}
+		return length;
+	}
+
 	public static double getDistance(OSMNode n1, OSMNode n2) {
 		return getDistance(n1.toPoint(), n2.toPoint());
 	}
@@ -69,6 +176,11 @@ public class OpenStreetMap {
 
 	private static boolean containsTag(List<? extends OSMElement> els, String key, String valueOrNull) {
 		return !filterForTag(els, key, valueOrNull, true).isEmpty();
+	}
+
+	private static <T extends OSMElement> List<T> filterForTag(
+			List<T> els, String key, String valueOrNull) {
+		return filterForTag(els, key, valueOrNull, false);
 	}
 
 	private static <T extends OSMElement> List<T> filterForTag(
