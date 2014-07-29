@@ -2,6 +2,7 @@ package io.hummer.osm.model;
 
 
 import java.util.HashMap;
+import java.util.Map;
 
 
 /**
@@ -29,22 +30,28 @@ public abstract class TiledMapAbstract<V> extends HashMap<Tile, V> {
 	}
 
 	/**
-	 * Determine whether a tile is in the cache. 
+	 * Determine whether a tile is in the cache, and return the tile value. 
 	 * If necessary, the tile value/content belonging to the given
 	 * key will be lazily loaded (implemented by subclasses).
-	 * @param t
+	 * @param t the tile
 	 * @return
 	 */
 	public V findInCache(Tile t) {
-		for(Tile t1 : keySet()) {
-			if(t.containedIn(t1)) {
+		Map.Entry<Tile,V> entry = findCacheEntry(t);
+		if(entry == null)
+			return null;
+		return entry.getValue();
+	}
+
+	public Map.Entry<Tile,V> findCacheEntry(Tile t) {
+		for(Map.Entry<Tile,V> entry : entrySet()) {
+			if(t.containedIn(entry.getKey())) {
 				/* load lazily if necessary. */
-				V obj = get(t1);
-				if(obj == null) {
-					V els = loadLazily(t1);
-					put(t1, els);
+				if(entry.getValue() == null) {
+					V els = loadLazily(entry.getKey());
+					put(entry.getKey(), els);
 				}
-				return obj;
+				return entry;
 			}
 		}
 		return null;

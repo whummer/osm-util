@@ -66,4 +66,11 @@ public class Line {
 
 		return true;
 	}
+	
+	@Override
+	public String toString() {
+		return "Line[" +
+				"(" + startX + "," + startY + ")->" +
+				"(" + endX + "," + endY + ")]";
+	}
 }

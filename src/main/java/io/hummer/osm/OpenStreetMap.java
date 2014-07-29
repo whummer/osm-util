@@ -5,6 +5,7 @@ import io.hummer.osm.query.OSMCachedQuerier;
 import io.hummer.osm.query.OSMElement;
 import io.hummer.osm.query.OSMNode;
 import io.hummer.osm.query.OSMWay;
+import io.hummer.osm.query.TagFilter;
 import io.hummer.osm.util.Util;
 
 import java.util.LinkedList;
@@ -153,50 +154,45 @@ public class OpenStreetMap {
 	}
 	public static List<OSMWay> getOSMWaysInVicinity(double lat, double lon,
 			double vicinityRange, boolean trimToTile) throws Exception {
-		return getOSMElementsInVicinity(lat, lon, vicinityRange, OSMWay.class, trimToTile);
+		return getOSMElementsInVicinity(lat, lon, vicinityRange, OSMWay.class, trimToTile, null);
 	}
 
 	public static List<OSMNode> getOSMNodesInVicinity(double lat, double lon,
 			double vicinityRange) throws Exception {
-		return getOSMElementsInVicinity(lat, lon, vicinityRange, OSMNode.class, true);
+		return getOSMElementsInVicinity(lat, lon, vicinityRange, OSMNode.class, true, null);
+	}
+
+	public static List<OSMNode> getOSMNodesInVicinity(double lat, double lon,
+			double vicinityRange, TagFilter filter) throws Exception {
+		return getOSMElementsInVicinity(lat, lon, vicinityRange, OSMNode.class, true, filter);
 	}
 
 	@SuppressWarnings("unchecked")
 	private static <T extends OSMElement> List<T> getOSMElementsInVicinity(double lat, double lon,
-			double vicinityRange, Class<? extends T> clazz, boolean trimToTile) throws Exception {
+			double vicinityRange, Class<? extends T> clazz, boolean trimToTile, TagFilter filter) 
+					throws Exception {
 		List<T> result = new LinkedList<T>();
-		List<OSMElement> elements = querier.getElements(lat, lon, vicinityRange, trimToTile);
+		List<OSMElement> elements = querier.getElements(
+				lat, lon, vicinityRange, trimToTile);
 		for(OSMElement e : elements) {
 			if(clazz.isAssignableFrom(e.getClass())) {
-				result.add((T)e);
+				if(filter == null || filter.matches(e)) {
+					result.add((T)e);
+				}
 			}
 		}
 		return result;
 	}
 
 	private static boolean containsTag(List<? extends OSMElement> els, String key, String valueOrNull) {
-		return !filterForTag(els, key, valueOrNull, true).isEmpty();
+		return !TagFilter.filterForTag(els, 
+				TagFilter.contains(key, valueOrNull), true).isEmpty();
 	}
 
 	private static <T extends OSMElement> List<T> filterForTag(
 			List<T> els, String key, String valueOrNull) {
-		return filterForTag(els, key, valueOrNull, false);
-	}
-
-	private static <T extends OSMElement> List<T> filterForTag(
-			List<T> els, String key, String valueOrNull, boolean maxOneResult) {
-		List<T> result = new LinkedList<T>();
-		for(T el : els) {
-			if(el.getTags().containsKey(key) && 
-					(valueOrNull == null || 
-					valueOrNull.equals(el.getTags().get(key)))) {
-				result.add(el);
-				if(maxOneResult) {
-					return result;
-				}
-			}
-		}
-		return result;
+		return TagFilter.filterForTag(els, 
+				TagFilter.contains(key, valueOrNull), false);
 	}
 
 	public static void main(String[] args) throws Exception {

@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -34,12 +35,19 @@ import org.w3c.dom.NodeList;
  */
 public class OSMCachedQuerier {
 
-	private final double maxVicinity = 0.02;
+	private final double maxVicinity = Constants.MAX_VICINITY;
+	private final double queryVicinity = Constants.DEFAULT_QUERY_VICINITY;
 	private int requestCount;
 	private TiledMapAbstract<List<OSMElement>> cache = new TiledMapOSM();
 
 	static final String OVERPASS_API = "http://www.overpass-api.de/api/";
 	static final String OPENSTREETMAP_API_06 = "http://www.openstreetmap.org/api/0.6/";
+
+	static {
+		if(!new File(Constants.TMP_DIR).exists()) {
+			new File(Constants.TMP_DIR).mkdir();
+		}
+	}
 
 	public OSMCachedQuerier() {
 		this(true);
@@ -81,35 +89,79 @@ public class OSMCachedQuerier {
 			throw new RuntimeException("Max. vicinity (" + maxVicinity + 
 					") exceeded: " + vicinityRange);
 		}
-		Tile t = new Tile();
-		t.left = lon - vicinityRange;
-		t.bottom = lat - vicinityRange;
-		t.right = lon + vicinityRange;
-		t.top = lat + vicinityRange;
+		Tile totalTile = new Tile();
+		totalTile.left = lon - vicinityRange;
+		totalTile.bottom = lat - vicinityRange;
+		totalTile.right = lon + vicinityRange;
+		totalTile.top = lat + vicinityRange;
 
-		List<OSMElement> result = cache.findInCache(t);
-		if(result == null) {
-			//System.out.println("Could not find OSM element for tile " + t);
-			double vicinityToGrab = maxVicinity;
-			Document doc = getXML(lat, lon, vicinityToGrab);
-			result = getElements(doc);
-			Tile grabbedTile = new Tile();
-			grabbedTile.left = lon - vicinityToGrab;
-			grabbedTile.bottom = lat - vicinityToGrab;
-			grabbedTile.right = lon + vicinityToGrab;
-			grabbedTile.top = lat + vicinityToGrab;
-			cache.put(grabbedTile, result);
+		List<OSMElement> result = new LinkedList<OSMElement>();
+		//System.out.println("Could not find OSM element for tile " + t);
+		double vicinityToGrab = queryVicinity;
+		int maxTileSizeReductions = 10;
+		for(int i = 0; i < maxTileSizeReductions; i ++) {
+			try {
+				result = new LinkedList<OSMElement>();
+				List<Tile> tiles = Tile.makeTiles(totalTile, vicinityToGrab * 2);
+				for(Tile t1 : tiles) {
+					Map.Entry<Tile,List<OSMElement>> tmpEntry = cache.findCacheEntry(t1);
+					List<OSMElement> tmp = null;
+					if(tmpEntry == null) {
+						tmp = retrieveAndCacheTile(t1);
+					} else {
+						tmp = tmpEntry.getValue();
+						if(!tmpEntry.getKey().equals(t1)) {
+//							long time = System.currentTimeMillis();
+							tmp = trimToTile(tmp, t1);
+//							System.out.println("trimmed to tile (ms): " + 
+//									(System.currentTimeMillis() - time));
+						}
+					}
+					//System.out.println("Elements for tile " + t1 + ": " + tmp.size());
+					for(OSMElement e : tmp) {
+						/* do NOT make this check -> too costly! */
+						//if(!result.contains(e)) {
+							result.add(e);
+						//}
+					}
+				}
+				break;
+			} catch (RuntimeException e) {
+				if(i >= maxTileSizeReductions - 1) {
+					throw e;
+				}
+				/* re-try with reduced vicinity */
+				vicinityToGrab /= 1.5;
+				System.out.println("WARN: Re-trying OSM query with vicinity " + vicinityToGrab);
+			}
 		}
 
 		//System.out.println("result before: " + result.size());
 		//int sizeBefore = result.size();
 		if(trimToTile) {
-			result = trimToTile(result, t);
+			System.out.println("Trimming result (" + result.size() + " elements) to tile " + totalTile);
+			result = trimToTile(result, totalTile);
 		}
 		//System.out.println("result before/after: " + sizeBefore + "/" + result.size());
 
 		return result;
 	}
+
+	private List<OSMElement> retrieveAndCacheTile(Tile tile) {
+		Document doc = getXML(tile, 0, 1.0);
+		List<OSMElement> result = getElements(doc);
+		cache.put(tile, result);
+		return result;
+	}
+//	private List<OSMElement> retrieveAndCacheTile(double lat, 
+//			double lon, double vicinityToGrab) {
+//		Tile tile = new Tile();
+//		tile.left = lon - vicinityToGrab;
+//		tile.bottom = lat - vicinityToGrab;
+//		tile.right = lon + vicinityToGrab;
+//		tile.top = lat + vicinityToGrab;
+//		return retrieveAndCacheTile(tile);
+//	}
 
 	private List<OSMElement> trimToTile(List<OSMElement> in, Tile t) {
 		List<OSMElement> result = new ArrayList<OSMElement>();
@@ -125,8 +177,8 @@ public class OSMCachedQuerier {
 				for(int i = 0; i < w.nodes.size() - 1; i ++) {
 					OSMNode n1 = w.nodes.get(i);
 					OSMNode n2 = w.nodes.get(i + 1);
-					Line l = new Line(n1.toPoint(), n2.toPoint());
-					if(t.intersects(l)) {
+					Line l = new Line(n1.lon, n1.lat, n2.lon, n2.lat);
+					if(t.containsOrIntersects(l)) {
 						if(!copy.nodes.contains(n1))
 							copy.nodes.add(n1);
 						if(!copy.nodes.contains(n2))
@@ -142,15 +194,14 @@ public class OSMCachedQuerier {
 			} else {
 				throw new RuntimeException("Unexpected type: " + e);
 			}
-
-			/* remove unreferenced nodes which are outside the tile */
-			for(int i = 0; i < result.size(); i ++) {
-				OSMElement el = result.get(i);
-				if(el instanceof OSMNode) {
-					OSMNode n = (OSMNode)el;
-					if(!refEls.contains(n.id) && !t.contains(n.toPoint())) {
-						result.remove(i--);
-					}
+		}
+		/* remove unreferenced nodes which are outside the tile */
+		for(int i = 0; i < result.size(); i ++) {
+			OSMElement el = result.get(i);
+			if(el instanceof OSMNode) {
+				OSMNode n = (OSMNode)el;
+				if(!refEls.contains(n.id) && !t.contains(n.toPoint())) {
+					result.remove(i--);
 				}
 			}
 		}
@@ -169,15 +220,19 @@ public class OSMCachedQuerier {
 				format.format(t.top);
 	}
 
-	private Document getXML(double lat, double lon, double vicinityRange) {
-		return getXML(lat, lon, vicinityRange, 2);
-	}
-	private Document getXML(double lat, double lon, double vicinityRange, int numRetries) {
+//	private Document getXML(double lat, double lon, double vicinityRange, 
+//			int numRetries, double tileSizeDivisorOnRetry) {
+//		Tile t = new Tile(lon - vicinityRange,
+//				lat - vicinityRange,
+//				lon + vicinityRange,
+//				lat + vicinityRange);
+//		return getXML(t, numRetries, tileSizeDivisorOnRetry);
+//	}
+//	private Document getXML(Tile t) {
+//		return getXML(t, 0, 1.0);
+//	}
+	private Document getXML(Tile t, int numRetries, double tileSizeDivisorOnRetry) {
 
-		Tile t = new Tile(lon - vicinityRange,
-				lat - vicinityRange,
-				lon + vicinityRange,
-				lat + vicinityRange);
 		String spec = getCoordinatesSpec(t);
 
 		InputStream stream = null;
@@ -200,7 +255,8 @@ public class OSMCachedQuerier {
 				} catch (Exception e) {
 					if(numRetries > 0) {
 						Thread.sleep(2000);
-						return getXML(lat, lon, vicinityRange/1.5, numRetries - 1);
+						return getXML(t.centeredDivideBy(tileSizeDivisorOnRetry), 
+								numRetries - 1, tileSizeDivisorOnRetry);
 					} else {
 						throw new RuntimeException("Unable to fetch (after multiple attempts): " + url);
 					}
@@ -251,7 +307,7 @@ public class OSMCachedQuerier {
 			if (item.getNodeName().equals("way")) {
 				OSMWay way = new OSMWay();
 				result.add(way);
-				way.tags.putAll(getTags(item));
+				way.addTags(getTags(item));
 				NodeList wayNodes = item.getChildNodes();
 				for (int j = 1; j < wayNodes.getLength(); j++) {
 					Node wayItem = wayNodes.item(j);
