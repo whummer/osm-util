@@ -3,6 +3,7 @@ package io.hummer.osm.model;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -19,6 +20,12 @@ public class Tile implements Serializable {
 		this.bottom = bottom;
 		this.right = right;
 		this.top = top;
+	}
+
+	public Point getCenter() {
+		return new Point(
+				left + ((right - left) / 2.0),
+				bottom + ((top - bottom) / 2.0));
 	}
 
 	public boolean containedIn(Tile t) {
@@ -56,7 +63,7 @@ public class Tile implements Serializable {
 				Math.min(l.startY, l.endY)).containedIn(this);
 	}
 
-	public boolean intersects(Line l) {
+	public boolean containsOrIntersects(Line l) {
 		if(contains(l))
 			return true;
 		for(Line b : getBorderLines()) {
@@ -68,9 +75,9 @@ public class Tile implements Serializable {
 
 	public List<Line> getBorderLines() {
 		return Arrays.asList(
-				new Line(left, top, left, bottom),
+				new Line(left, bottom, left, top),
 				new Line(left, bottom, right, bottom),
-				new Line(right, top, right, bottom),
+				new Line(right, bottom, right, top),
 				new Line(left, top, right, top));
 	}
 
@@ -84,7 +91,6 @@ public class Tile implements Serializable {
 		if(!(o instanceof Tile))
 			return false;
 		Tile t = (Tile)o;
-//		return containedIn(t);
 		return exactEquals(t);
 	}
 
@@ -92,6 +98,38 @@ public class Tile implements Serializable {
 	public String toString() {
 		return "Tile [left=" + left + ", bottom=" + bottom + ", right=" + right
 				+ ", top=" + top + "]";
+	}
+	public static List<Tile> makeTiles(Tile t, double tileSize) {
+		List<Tile> result = new LinkedList<Tile>();
+		for(double left = t.left; left < t.right; left += tileSize) {
+			for(double top = t.top; top > t.bottom; top -= tileSize) {
+				Tile t1 = new Tile(left, top - tileSize, left + tileSize, top);
+				if(t1.right > t.right) {
+					t1.right = t.right;
+				}
+				if(t1.bottom < t.bottom) {
+					t1.bottom = t.bottom;
+				}
+				result.add(t1);
+			}
+		}
+		return result;
+	}
+	public Tile centeredDivideBy(double tileSizeDivisorOnRetry) {
+		double oldSize = right - left;
+		Point c = getCenter();
+		double newSize = oldSize / tileSizeDivisorOnRetry;
+		double left = c.x - newSize;
+		double right = c.x + newSize;
+		double bottom = c.y - newSize;
+		double top = c.y + newSize;
+		return new Tile(left, bottom, right, top);
+	}
+	public double getSizeX() {
+		return Math.abs(left - right);
+	}
+	public double getSizeY() {
+		return Math.abs(left - right);
 	}
 
 }

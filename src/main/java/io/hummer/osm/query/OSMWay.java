@@ -20,4 +20,5 @@ public class OSMWay extends OSMElement {
 				(tags.isEmpty() ? "" : "tags=" + tags + " ") +
 				"]";
 	}
+
 }
