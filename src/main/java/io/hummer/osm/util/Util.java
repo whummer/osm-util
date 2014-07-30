@@ -63,6 +63,7 @@ public class Util {
 			while((tmp = r.readLine()) != null) {
 				result.add(tmp);
 			}
+			r.close();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}

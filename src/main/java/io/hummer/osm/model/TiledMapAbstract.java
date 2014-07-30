@@ -4,6 +4,10 @@ package io.hummer.osm.model;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+
 
 /**
  * A map whose keys are Tile objects. Given a Tile t1 as key, 
@@ -17,10 +21,13 @@ import java.util.Map;
  *
  * @param <V>
  */
-public abstract class TiledMapAbstract<V> extends HashMap<Tile, V> {
-	private static final long serialVersionUID = 1L;
+@XmlType
+public abstract class TiledMapAbstract<V> {
 
+	@XmlAttribute
 	protected int maxEntries = 0; /* 0=unbounded */
+	@XmlElement
+	protected HashMap<Tile, V> values = new HashMap<Tile, V>();
 
 	public TiledMapAbstract() {
 		this(0);
@@ -44,7 +51,7 @@ public abstract class TiledMapAbstract<V> extends HashMap<Tile, V> {
 	}
 
 	public Map.Entry<Tile,V> findCacheEntry(Tile t) {
-		for(Map.Entry<Tile,V> entry : entrySet()) {
+		for(Map.Entry<Tile,V> entry : values.entrySet()) {
 			if(t.containedIn(entry.getKey())) {
 				/* load lazily if necessary. */
 				if(entry.getValue() == null) {
@@ -59,12 +66,16 @@ public abstract class TiledMapAbstract<V> extends HashMap<Tile, V> {
 
 	public abstract V loadLazily(Tile t);
 
-	@Override
 	public V put(Tile key, V value) {
-		if(!isEmpty() && maxEntries > 0 && size() + 1 > maxEntries) {
-			Tile someKey = keySet().iterator().next();
-			remove(someKey);
+		if(!values.isEmpty() && maxEntries > 0 
+				&& values.size() + 1 > maxEntries) {
+			Tile someKey = values.keySet().iterator().next();
+			values.remove(someKey);
 		}
-		return super.put(key, value);
+		return values.put(key, value);
+	}
+
+	public int size() {
+		return values.size();
 	}
 }
