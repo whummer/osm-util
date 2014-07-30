@@ -6,9 +6,12 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.xml.bind.annotation.XmlRootElement;
+
 /**
  * @author Waldemar Hummer (hummer@dsg.tuwien.ac.at)
  */
+@XmlRootElement
 public class Tile implements Serializable {
 	private static final long serialVersionUID = 1L;
 
