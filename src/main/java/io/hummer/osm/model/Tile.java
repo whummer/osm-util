@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
@@ -15,7 +16,14 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class Tile implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	public double left, bottom, right, top;
+	@XmlAttribute(name="l")
+	public double left;
+	@XmlAttribute(name="b")
+	public double bottom;
+	@XmlAttribute(name="r")
+	public double right;
+	@XmlAttribute(name="t")
+	public double top;
 
 	public Tile() { }
 	public Tile(double left, double bottom, double right, double top) {
