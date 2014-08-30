@@ -50,14 +50,6 @@
 					<target>1.5</target>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<version>2.3.1</version>
-				<configuration>
-					<outputDirectory>build/io/hummer/osm-util/${project.version}/</outputDirectory>
-				</configuration>
-			</plugin>
 		</plugins>
 	</build>
 
