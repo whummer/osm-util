@@ -13,7 +13,7 @@ import javax.xml.bind.annotation.XmlSeeAlso;
 /**
  * @author Waldemar Hummer (hummer@dsg.tuwien.ac.at)
  */
-@XmlSeeAlso(value={OSMElement.TagEntry.class})
+@XmlSeeAlso({OSMElement.TagEntry.class})
 public class OSMElement {
 
 	@XmlElement(name="tag")
@@ -87,8 +87,10 @@ public class OSMElement {
 	}
 
 	public void addTags(Map<String, String> tagsMap) {
-		for(String key : tagsMap.keySet()) {
-			tags.add(new TagEntry(key, tagsMap.get(key)));
+		if(tagsMap != null) {
+			for(String key : tagsMap.keySet()) {
+				tags.add(new TagEntry(key, tagsMap.get(key)));
+			}
 		}
 	}
 

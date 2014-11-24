@@ -32,6 +32,10 @@ public class Tile implements Serializable {
 		this.right = right;
 		this.top = top;
 	}
+	public Tile(Point center, double vicinity) {
+		this(center.x - vicinity, center.y - vicinity, 
+				center.x + vicinity, center.y + vicinity);
+	}
 
 	public Point getCenter() {
 		return new Point(

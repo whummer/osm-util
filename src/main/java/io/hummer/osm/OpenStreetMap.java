@@ -167,6 +167,11 @@ public class OpenStreetMap {
 		return getOSMElementsInVicinity(lat, lon, vicinityRange, OSMNode.class, true, filter);
 	}
 
+	public static List<OSMElement> getOSMElementsInVicinity(double lat, double lon,
+			double vicinityRange) throws Exception {
+		return getOSMElementsInVicinity(lat, lon, vicinityRange, OSMElement.class, true, null);
+	}
+
 	@SuppressWarnings("unchecked")
 	private static <T extends OSMElement> List<T> getOSMElementsInVicinity(double lat, double lon,
 			double vicinityRange, Class<? extends T> clazz, boolean trimToTile, TagFilter filter) 

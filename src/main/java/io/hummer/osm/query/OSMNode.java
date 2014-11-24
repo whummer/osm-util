@@ -6,11 +6,13 @@ import java.util.Map;
 
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSeeAlso;
 
 /**
  * @author Waldemar Hummer (hummer@dsg.tuwien.ac.at)
  */
 @XmlRootElement(name="node")
+@XmlSeeAlso(OSMNode.OSMNodeRef.class)
 public class OSMNode extends OSMElement {
 
 	@XmlAttribute
@@ -20,7 +22,22 @@ public class OSMNode extends OSMElement {
 	@XmlAttribute
 	String version;
 
+	@XmlRootElement(name="nd")
+	public static class OSMNodeRef extends OSMNode {
+		@XmlAttribute
+		public String ref;
+
+		public OSMNodeRef() {}
+		public OSMNodeRef(String ref) {
+			this.ref = ref;
+		}
+	}
+
 	public OSMNode() {}
+
+	public OSMNode(double lat, double lon) {
+		this(null, lat, lon, null, null);
+	}
 
 	public OSMNode(String id, double lat, double lon,
 			String version, Map<String, String> tags) {
@@ -47,6 +64,13 @@ public class OSMNode extends OSMElement {
 
 	public boolean isSameLocationAs(OSMNode n) {
 		return lat == n.lat && lon == n.lon;
+	}
+
+	public double getLat() {
+		return lat;
+	}
+	public double getLon() {
+		return lon;
 	}
 
 	@Override

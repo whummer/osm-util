@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -153,15 +154,6 @@ public class OSMCachedQuerier {
 		cache.put(tile, result);
 		return result;
 	}
-//	private List<OSMElement> retrieveAndCacheTile(double lat, 
-//			double lon, double vicinityToGrab) {
-//		Tile tile = new Tile();
-//		tile.left = lon - vicinityToGrab;
-//		tile.bottom = lat - vicinityToGrab;
-//		tile.right = lon + vicinityToGrab;
-//		tile.top = lat + vicinityToGrab;
-//		return retrieveAndCacheTile(tile);
-//	}
 
 	private List<OSMElement> trimToTile(List<OSMElement> in, Tile t) {
 		List<OSMElement> result = new ArrayList<OSMElement>();
@@ -173,6 +165,7 @@ public class OSMCachedQuerier {
 			} else if(e instanceof OSMWay) {
 				OSMWay w = (OSMWay)e;
 				OSMWay copy = new OSMWay();
+				copy.id = w.id;
 				/* add nodes/lines which intersect with the given tile */
 				for(int i = 0; i < w.nodes.size() - 1; i ++) {
 					OSMNode n1 = w.nodes.get(i);
@@ -306,6 +299,7 @@ public class OSMCachedQuerier {
 			Node item = osmXMLNodes.item(i);
 			if (item.getNodeName().equals("way")) {
 				OSMWay way = new OSMWay();
+				way.id = ((Element)item).getAttribute("id");
 				result.add(way);
 				way.addTags(getTags(item));
 				NodeList wayNodes = item.getChildNodes();

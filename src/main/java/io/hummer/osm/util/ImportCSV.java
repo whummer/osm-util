@@ -43,7 +43,7 @@ public class ImportCSV {
 		List<OSMNode> result = new ArrayList<OSMNode>();
 		int count = 0;
 		int startLine = skipHeaderLine ? 1 : 0;
-		for(String line: Util.readFile(file)) {
+		for(String line: Util.readFileLines(file)) {
 			if(count >= startLine) {
 				String[] parts = line.split(separator);
 				String id = colMapping.containsKey(Column.ID) ? 

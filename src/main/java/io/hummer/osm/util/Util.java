@@ -53,7 +53,16 @@ public class Util {
 		}
 	}
 
-	public static List<String> readFile(String file) {
+	public static String readFile(String file) {
+		StringBuilder b = new StringBuilder();
+		for(String s : readFileLines(file)) {
+			b.append(s);
+			b.append("\n");
+		}
+		return b.toString();
+	}
+
+	public static List<String> readFileLines(String file) {
 		List<String> result = new LinkedList<String>();
 		try {
 			BufferedReader r = new BufferedReader(

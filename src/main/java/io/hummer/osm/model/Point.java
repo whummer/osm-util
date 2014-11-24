@@ -6,6 +6,14 @@ package io.hummer.osm.model;
 public class Point {
 	public double x, y;
 
+	public static class PathPoint extends Point {
+		public double time;
+		public PathPoint(double x, double y, double time) {
+			super(x, y);
+			this.time = time;
+		}
+	}
+
 	public Point(double x, double y) {
 		this.x = x;
 		this.y = y;
