@@ -12,6 +12,10 @@ public class Point {
 			super(x, y);
 			this.time = time;
 		}
+		@Override
+		public String toString() {
+			return "Point[t=" + time + "][x=" + x + ", y=" + y + "]";
+		}
 	}
 
 	public Point(double x, double y) {

@@ -171,14 +171,29 @@ public class OpenStreetMap {
 			double vicinityRange) throws Exception {
 		return getOSMElementsInVicinity(lat, lon, vicinityRange, OSMElement.class, true, null);
 	}
+	public static List<OSMNode> getOSMNodes(List<OSMElement> elements) throws Exception {
+		return filter(elements, OSMNode.class);
+	}
 
-	@SuppressWarnings("unchecked")
 	private static <T extends OSMElement> List<T> getOSMElementsInVicinity(double lat, double lon,
 			double vicinityRange, Class<? extends T> clazz, boolean trimToTile, TagFilter filter) 
 					throws Exception {
 		List<T> result = new LinkedList<T>();
 		List<OSMElement> elements = querier.getElements(
 				lat, lon, vicinityRange, trimToTile);
+		result = filter(elements, clazz, filter);
+		return result;
+	}
+
+	private static <T extends OSMElement> List<T> filter(
+			List<OSMElement> elements, Class<? extends T> clazz) {
+		return filter(elements, clazz, null);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static <T extends OSMElement> List<T> filter(List<OSMElement> elements, 
+			Class<? extends T> clazz, TagFilter filter) {
+		List<T> result = new LinkedList<T>();
 		for(OSMElement e : elements) {
 			if(clazz.isAssignableFrom(e.getClass())) {
 				if(filter == null || filter.matches(e)) {

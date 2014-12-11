@@ -14,7 +14,7 @@ public class Constants {
 	/**
 	 * Default vicinity of tiles received by queries.
 	 */
-	public static double DEFAULT_QUERY_VICINITY = 0.02;
+	public static double DEFAULT_QUERY_VICINITY = 0.009;
 	/**
 	 * Maximum latitude/longitude vicinity allowed for 
 	 * tile service requests.
