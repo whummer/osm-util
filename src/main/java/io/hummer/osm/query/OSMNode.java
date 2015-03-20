@@ -7,6 +7,7 @@ import java.util.Map;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSeeAlso;
+import javax.xml.bind.annotation.XmlTransient;
 
 /**
  * @author Waldemar Hummer (hummer@dsg.tuwien.ac.at)
@@ -15,9 +16,9 @@ import javax.xml.bind.annotation.XmlSeeAlso;
 @XmlSeeAlso(OSMNode.OSMNodeRef.class)
 public class OSMNode extends OSMElement {
 
-	@XmlAttribute
+	@XmlTransient
 	double lat;
-	@XmlAttribute
+	@XmlTransient
 	double lon;
 	@XmlAttribute
 	String version;
@@ -30,6 +31,14 @@ public class OSMNode extends OSMElement {
 		public OSMNodeRef() {}
 		public OSMNodeRef(String ref) {
 			this.ref = ref;
+		}
+		@Override @XmlTransient
+		public double getLat() {
+			return super.getLat();
+		}
+		@Override @XmlTransient
+		public double getLon() {
+			return super.getLon();
 		}
 	}
 
@@ -66,9 +75,11 @@ public class OSMNode extends OSMElement {
 		return lat == n.lat && lon == n.lon;
 	}
 
+	@XmlAttribute
 	public double getLat() {
 		return lat;
 	}
+	@XmlAttribute
 	public double getLon() {
 		return lon;
 	}
